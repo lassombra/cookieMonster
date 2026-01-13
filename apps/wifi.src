@@ -38,8 +38,11 @@ globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.s
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, Util.bold(" -c <alias> ")+"connect to wifi network, alias optional"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, Util.bold(" -r [alias] ")+"forget a manually added network"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "----------------------------------------------------------------------"))
-globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, " All entries assume wlan0 but can take an optional extra parameter of"))
-globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, " a wifi interface of your choice, where relevant."))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| All entries assume wlan0 but can take an optional extra parameter  |"))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| of a wifi interface of your choice, where relevant.                |"))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "|                                                                    |"))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| Connect will choose a random network that is not manually entered  |"))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "|                                                                    |"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "======================================================================"))
 
 globals.apps.wifi.forget = function(alias)
@@ -98,6 +101,9 @@ globals.apps.wifi.connect = function(args)
         for network in globals.db.retrieveAll(self.NETWORK_TABLE_NAME)
             if aliasedBssids.indexOf(network.bssid) == null then availableNetworks.push(network)
         end for
+        if availableNetworks.len == 0 then
+            print(Util.size(80, Util.color(Util.Colors.cyan, "All known networks are aliased networks")))
+        end if
         randomIndex = floor(rnd * availableNetworks.len)
         network = availableNetworks[randomIndex]
         status = computer.connect_wifi(interface, network.bssid, network.essid, network.key)
