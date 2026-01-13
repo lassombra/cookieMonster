@@ -42,7 +42,7 @@ globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.s
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| of a wifi interface of your choice, where relevant.                |"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "|                                                                    |"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| Connect will choose a random network that is not manually entered  |"))
-globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "|                                                                    |"))
+globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "| or currently connected                                             |"))
 globals.apps.wifi.help = globals.apps.wifi.help + char(10) + Util.pos(10, Util.size(80, "======================================================================"))
 
 globals.apps.wifi.forget = function(alias)
@@ -98,11 +98,12 @@ globals.apps.wifi.connect = function(args)
             aliasBssid.push(alias.bssid)
         end for
         availableNetworks = []
+        connectedNetwork = get_router.bssid_name
         for network in globals.db.retrieveAll(self.NETWORK_TABLE_NAME)
-            if aliasedBssids.indexOf(network.bssid) == null then availableNetworks.push(network)
+            if aliasedBssids.indexOf(network.bssid) == null and netowrk.bssid != connectedNetwork then availableNetworks.push(network)
         end for
         if availableNetworks.len == 0 then
-            print(Util.size(80, Util.color(Util.Colors.cyan, "All known networks are aliased networks")))
+            print(Util.size(80, Util.color(Util.Colors.Cyan, "All known networks are aliased networks or currently connected")))
         end if
         randomIndex = floor(rnd * availableNetworks.len)
         network = availableNetworks[randomIndex]
