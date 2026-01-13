@@ -1,0 +1,159 @@
+Util = {}
+if not get_custom_object.hasIndex("cryptools") then
+	get_custom_object.cryptools = include_lib("/lib/crypto.so")
+end if
+Util.determine_user = function(result)
+	target = result
+	if typeof(target) == "shell" then
+		target = target.host_computer
+	end if
+	if typeof(target) == "computer" then
+		target = target.File("/")
+	end if
+	if typeof(target) == "file" then
+		file = target
+		while file.name != "/"
+			file = file.parent
+		end while
+		if not file then return Util.format_string("guest", Util.Colors.Grey)
+		if file.has_permission("w") then return Util.format_string("root", Util.Colors.Green, true, true)
+		for folder in file.get_folders
+			if folder.name == "home" then file=folder
+		end for
+		for folder in file.get_folders
+			if folder.has_permission("w") and folder.name != "guest" then
+				return Util.format_string(folder.name, Util.Colors.Cyan, false, true)
+			end if
+		end for
+	end if
+	return Util.format_string("???", Util.Colors.Grey, false, true)
+end function
+
+Util.extract_passwords = function(result)
+	success = false
+	passwords = "user pass"
+	file = Util.get_path(result, "/etc/passwd")
+	if file != null and file.has_permission("r") then
+		success = true
+		found_passwords = file.get_content
+	end if
+	if success then
+		for line in found_passwords.split("\n")
+			parts = line.split(":")
+			if parts.len == 2 then
+				passwords = passwords + "\n" + parts[0] + " " + get_custom_object.cryptools.decipher(parts[1])
+			end if
+		end for
+	end if
+	return [success, passwords]
+end function
+Util.get_path = function(result, path) 
+	file = result
+	if typeof(file) == "shell" then
+		file = file.host_computer
+	end if
+	if typeof(file) == "computer" then
+		file = file.File(path)
+	end if
+	if not file or typeof(file) != "file" then 
+		return null
+	end if
+	if file.path != path then
+		while file.path != "/"
+			file = file.parent
+		end while
+		for part in path.split("/")[1:]
+			found = false
+			if not file.is_folder then
+				break
+			end if
+			for directory in file.get_folders
+				if directory.name == part then
+					file = directory
+					found = true
+					break
+				end if
+			end for
+			if not found then
+				for subfile in file.get_files
+					if subfile.name == part then
+						file = subfile
+						break
+					end if
+				end for
+			end if
+		end for
+	end if
+	return file
+end function
+Util.Colors = {"Cyan": "#00FFFF",
+"Blue": "#0000FF",
+"Yellow": "#FFFF00",
+"Magenta": "#FF00FF",
+"Red": "#FF0000",
+"Green": "#00FF00", 
+"Grey":"#F0F0F0",
+"Brown":"#543605",
+"White":"#F9F9F9"
+}
+Util.size = function(size, string)
+	return "<size="+size+"%>"+string+"</size>"
+end function
+Util.pos = function(pos, string)
+	return "<pos="+pos+">"+string+"</pos>"
+end function
+Util.color = function(color, string)
+	return "<color="+color+">"+string+"</color>"
+end function
+Util.bold = function(string)
+	return "<b>"+string+"</b>"
+end function
+Util.italic = function(string)
+	return "<i>"+string+"</i>"
+end function
+Util.format_string = function(string, color = false, bold = false, italic = false)
+	output = string
+	if italic then
+		output = "<i>" + output + "</i>"
+	end if
+	if bold then
+		output = "<b>"+output+"</b>"
+	end if
+	if color then
+		output = "<color="+color+">"+output+"</color>"
+	end if
+	return output
+end function
+Util.println = function(string, color = false, bold = false, italic = false, skip_new_line = false)
+	output = Util.format_string(string, color, bold, italic)
+	if skip_new_line or bold or italic then
+		print(output)
+	else
+		print (output + "\n")
+	end if
+end function
+Util.extract_emails = function(result)
+	file = Util.get_path(result, "/home")
+	if file == null then 
+		return [false, ""]
+	end if
+	success = false
+	emails = "email password"
+	for folder in file.get_folders
+		if folder.name != "guest" and folder.has_permission("r") then
+			for subfolder in folder.get_folders
+				if subfolder.name == "Config" and subfolder.has_permission("r") then
+					for subfile in subfolder.get_files
+						if subfile.name == "Mail.txt" and subfile.has_permission("r") then
+							email = subfile.get_content
+							email = email.split(":")
+							emails = emails + "\n" + email[0] + " " + get_custom_object.cryptools.decipher(email[1]) 
+							success = true
+						end if
+					end for
+				end if
+			end for
+		end if
+	end for
+	return [success, emails]
+end function

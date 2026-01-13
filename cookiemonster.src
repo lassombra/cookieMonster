@@ -1,0 +1,105 @@
+version = "0.0.5"
+if not globals.hasIndex("apps") then globals.apps = {}
+if not globals.hasIndex("buffer") then globals.buffer = []
+import_code("db/db.src")
+import_code("utils/libs.src")
+import_code("utils/util.src")
+import_code("apps/apps.src")
+import_code("splashScreen.src")
+buildPrompt = function
+	public_ip = "Not Connected"
+	private_ip = "Not Connected"
+	if get_shell.host_computer.is_network_active then
+		public_ip = get_router.public_ip
+		private_ip = get_shell.host_computer.local_ip
+	end if
+	u = "<color=#00ffff><b>[</b></color>"+active_user+"@"+get_shell.host_computer.get_name+"<color=#00ffff><b>]</b></color>"
+	t = "<color=#00ffff><b>[</b></color>shell<color=#00ffff><b>]</b></color>"
+	ips = "<color=#00ffff><b>[</b></color>"+public_ip+"<color=#00ffff><b>]-[</b></color>"+private_ip+"<color=#00ffff><b>]</b></color>"
+	prompt = "<pos=10>——" + u + "———" + ips + "———" + t
+	prompt = prompt + "<voffset=-0.5em><pos=5>|<voffset=-1.5em><space=-0.5em><pos=5>|<voffset=-2em><pos=10>——"
+	prompt = prompt + "<color=#00ffff><b>[</b></color>" + current_path + "<color=#00ffff><b>]</b></color>—"
+	prompt = prompt + "<color=#0000ff><b>Cookie Monster </b></color>"
+	prompt = prompt + "<size=80%><color=#00ff00><i>v_"+globals.version+"</i></color></size>"
+	prompt = prompt + "<size=175%>" + char(187) + "<size=100%><voffset=-2em>"
+	prompt = char(10) + "<color=#00ffff><b>" + prompt + "</b></color>"
+	return prompt
+end function
+mainShell = function
+	action = ""
+	args = []
+	if params.len > 0 then
+		globals.running = false
+		action = params[0]
+		if params.len > 1 then args = params[1:]
+	else
+		prompt = user_input(buildPrompt, false, false, true)
+		inputs = prompt.split(" ")
+		action = inputs[0]
+		for param in inputs[1:]
+			if param.trim != "" then args.push(param.trim)
+		end for
+	end if
+	if action == "" then return
+	if action == "exit" then 
+		globals.running = false
+		return
+	end if
+	if globals.apps.hasIndex(action) then
+		func = globals.apps[action]
+		if typeof(func) == "function" then 
+			func(args)
+		else 
+			func.run(args)
+		end if
+		return
+	end if
+	// cmdPath = GetFinalPath(action)
+	// if get_shell.host_computer.File(cmdPath) != null then
+	// 	get_shell.launch(cmdPath, params.join(" "))
+	// 	return
+	// end if
+	return 
+end function
+
+initApps = function()
+	path = get_shell.host_computer.File(program_path).parent.path
+	dbFolder = get_shell.host_computer.File(path + "/data")
+	password = ""
+	globals.db = new DB
+	if dbFolder == null then 
+		get_shell.host_computer.create_folder(path, "data")
+		password1 = user_input(Util.bold(Util.color(Util.Colors.Cyan, "Create database password> ")), true)
+		password2 = user_input(Util.bold(Util.color(Util.Colors.Cyan, "Confirm database password> ")), true)
+		if password1 == password2 then
+			password = password1
+			globals.db.init("CookieMonster", password, path+"/data")
+		else
+			exit(Util.bold(Util.color(Util.Colors.Magenta, "Passwords do not match")))
+		end if
+	else
+		password = user_input(Util.bold(Util.color(Util.Colors.Cyan, "Enter Database Password> ")), true)
+		globals.db.init("CookieMonster", password, path+"/data")
+		dbFile = get_shell.host_computer.File(path + "/data/db")
+		result = globals.db.load()
+		if result != "" and result != null then print(Util.size(60, Util.color(Util.Colors.Grey, result)))
+		if result != null and result != "" and dbFile != null then exit
+	end if
+	for key in globals.apps.indexes
+		app = globals.apps[key]
+		if typeof(app) != "function" and app.hasIndex("init") then app.init()
+	end for
+end function
+
+cleanup = function()
+	saveResult = globals.db.save()
+	if saveResult != null and saveResult != "" then print(Util.size(60, Util.color(Util.Colors.Magenta, saveResult)))
+end function
+
+splashScreen
+initApps
+globals.running = true
+while globals.running
+	mainShell
+end while
+cleanup

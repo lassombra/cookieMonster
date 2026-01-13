@@ -1,0 +1,137 @@
+DB = {"data":{}, "tableFiles": {}, "name": "DB", "password": "changeMe", "path": "/home/guest/DB"}
+
+DB.init = function(name, password, path)
+    self.name = name
+    self.password = password
+    self.path = path
+    self.data = {}
+    self.tableFiles = {}
+    return self
+end function
+
+// @param {string} tableName
+DB.addTable = function(tableName)
+    if self.data.hasIndex(tableName) then return false
+    self.data[tableName] = {}
+    return true
+end function
+
+DB.set = function(tableName, id, value)
+    if not self.data.hasIndex(tableName) then return false
+    self.data[tableName][id] = value
+    return true
+end function
+
+DB.retrieve = function(tableName, id)
+    if not self.data.hasIndex(tableName) then return null
+    table = self.data[tableName]
+    if not table.hasIndex(id) then return null
+    return table[id]
+end function
+
+DB.retrieveAll = function(tableName)
+    if not self.data.hasIndex(tableName) then return null
+    returnData = []
+    for key in self.data[tableName].indexes
+        returnData.push(self.data[tableName][key])
+    end for
+    return returnData
+end function
+
+DB.removeRow = function(tableName, index)
+    if not self.data.hasIndex(tableName) then return false
+    if not self.data[tableName].data.hasIndex(index) then return false
+    self.removeIndexes(tableName, index)
+    self.data[tableName].data.remove(index)
+    return true
+end function
+
+DB.save = function()
+    folder = get_shell.host_computer.File(self.path)
+    if folder == null or not folder.is_folder then return "Database path must be a folder"
+    if not folder.has_permission("w") then return "Permission denied"
+    file = get_shell.host_computer.File(folder.path + "/" + "db")
+    if file != null and not file.has_permission("w") then return "Permission denied"
+    srcFile = get_shell.host_computer.File(folder.path + "/" + "db.src")
+    if file != null and not file.has_permission("w") then return "Permission denied"
+    for key in self.data.indexes
+        if not self.tableFiles.hasIndex(key) then
+            self.tableFiles[key] = md5(rnd() + current_date)[0:6]
+        end if
+    end for
+    for key in self.tableFiles.indexes
+        file = get_shell.host_computer.File(folder.path + "/" + self.tableFiles[key])
+        srcFile = get_shell.host_computer.File(folder.path + "/" + self.tableFiles[key]+".src")
+        if file != null and not file.has_permission("w") then return "Permission denied"
+        if srcFile != null and not file.has_permission("w") then return "Permission denied"
+    end for
+    fileSecurityTop = "error = """""
+    fileSecurityTop = fileSecurityTop + char(10) + "if not get_custom_object.hasIndex("""+self.name+""") then error = ""Called with invalid context"""
+    fileSecurityTop = fileSecurityTop + char(10) + "if error == """" and not get_custom_object["""+self.name+"""].hasIndex(""password"") then error = ""Called without a password"""
+    fileSecurityTop = fileSecurityTop + char(10) + "if error == """" and get_custom_object["""+self.name+"""].password != md5(""" + self.password + """) then error = ""permission denied"""
+    fileSecurityTop = fileSecurityTop + char(10) + "if error == """" then"
+    fileSecurityEnd = char(10) + "end if"
+    fileSecurityEnd = fileSecurityEnd + char(10) + "if error != """" and not get_custom_object.hasIndex("""+self.name+""") then print error"
+    fileSecurityEnd = fileSecurityEnd + char(10) + "if error != """" and get_custom_object.hasIndex("""+self.name+""") then get_custom_object["""+self.name+"""].error = error"
+    for key in self.data.indexes 
+        tableData = self.data[key]
+        tableFile = char(10) + "table={}"
+        for id in tableData.indexes
+            row = tableData[id]
+            tableFile = tableFile + char(10) + "table[""" + id + """] = " + @row
+        end for
+        tableFile = tableFile + char(10) + "get_custom_object[""" + self.name + """][""" + key + """] = table"
+        srcPath = folder.path + "/" + self.tableFiles[key] + ".src"
+        srcFile = get_shell.host_computer.File(srcPath)
+        if not srcFile then 
+            result = get_shell.host_computer.touch(folder.path, self.tableFiles[key] + ".src")
+            if result != 1 then return result
+            srcFile = get_shell.host_computer.File(srcPath)
+        end if
+        srcFile.set_content(fileSecurityTop + tableFile + fileSecurityEnd)
+        buildResult = get_shell.build(srcPath, folder.path, false)
+        srcFile.delete
+        if buildResult != "" then return buildResult        
+    end for
+    tableList = self.tableFiles.indexes
+    tablePaths = self.tableFiles
+    metaFile = char(10) + "tables="+@tableList
+    metaFile = metaFile + char(10) + "tableFiles="+tablePaths
+    metaFile = metaFile + char(10) + "get_custom_object[""" + self.name + """].tables=tables"
+    metaFile = metaFile + char(10) + "get_custom_object[""" + self.name + """].tableFiles=tableFiles"
+    srcPath = folder.path + "/" + "db.src"
+    srcFile = get_shell.host_computer.File(srcPath)
+    if not srcFile then
+        get_shell.host_computer.touch(folder.path, "db.src")
+        srcFile = get_shell.host_computer.File(srcPath)
+    end if
+    srcFile.set_content(fileSecurityTop + metaFile + fileSecurityEnd)
+    buildResult = get_shell.build(srcPath, folder.path, false)
+    srcFile.delete
+    if buildResult != "" then return buildResult
+    return ""
+end function
+
+DB.load = function ()
+    get_custom_object[self.name] = {}
+    get_custom_object[self.name].password=md5(self.password)
+    folder = get_shell.host_computer.File(self.path)
+    if not folder then return "Could not load, folder not found"
+    metaFile = get_shell.host_computer.File(folder.path + "/db")
+    if not metaFile then return "Meta file not found"
+    if not metaFile.has_permission("r") or not metaFile.has_permission("x") then return "Permission denied: meta file"
+    get_shell.launch(folder.path + "/db")
+    if get_custom_object[self.name].hasIndex("error") then return get_custom_object[self.name].error
+    tables = get_custom_object[self.name].tables
+    self.tableFiles = get_custom_object[self.name].tableFiles
+    for key in tables
+        tablePath = folder.path + "/" + self.tableFiles[key]
+        tableFile = get_shell.host_computer.File(tablePath)
+        if not tableFile then return "Critical table file not found, database corrupted"
+        if not tableFile.has_permission("r") or not tableFile.has_permission("x") then return "Permission denied: table file"
+        get_shell.launch(tableFile.path)
+        self.data[key] = get_custom_object[self.name][key]
+    end for
+    get_custom_object.remove(self.name)
+    return ""
+end function

@@ -1,0 +1,8 @@
+error = ""
+if not get_custom_object.hasIndex("password") then error = "permission denied"
+if error != "" and get_custom_object.password != md5("pass") then error = "permission denied"
+if not error then
+    table = {}
+    table[key] = val
+    get_custom_object()["name"] = table
+end if

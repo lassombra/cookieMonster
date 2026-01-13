@@ -1,0 +1,16 @@
+import_code("db.src")
+file = get_shell.host_computer.File("/home/guest/DB")
+if not file then get_shell.host_computer.create_folder("/home/guest", "DB")
+_db = new DB
+_db.init("Database", "pass", "/home/guest/DB")
+_db.load()
+_db.addTable("basic")
+// _db.set("basic", "127.0.0.1", {"pass": "root", "libraries": {"lib_http.so":"1.0.3", "kernel_router.so":"1.3.7"}})
+print(_db.retrieve("basic", "127.0.0.1"))
+print(_db.save())
+
+_db2 = new DB
+_db2.init("Database", "pass", "/home/guest/DB")
+print(_db2.load())
+row = _db2.retrieve("basic", "127.0.0.1")
+print(row)

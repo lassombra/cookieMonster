@@ -1,0 +1,12 @@
+if not globals.hasIndex("apps") then globals.apps = {}
+// future apps commented out
+// import_code("nmap.src")
+// import_code("attack.src")
+// import_code("custom_bash.src")
+// import_code("secure.src")
+// import_code("tree.src")
+// import_code("cat.src")
+// import_code("crack.src")
+// import_code("sudo.src")
+// import_code("site.src")
+import_code("wifi.src")

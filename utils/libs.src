@@ -1,0 +1,29 @@
+import_code("util.src")
+Util.load_crypto = function()
+    if globals.hasIndex("crypto") then return globals.crypto
+    crypto = include_lib("/lib/crypto.so")
+    if crypto == null then crypto = include_lib(program_path + "/crypto.so")
+    if crypto == null then
+        installed = self.apt_install("crypto.so")
+        if installed then crypto = include_lib("/lib/crypto.so")
+    end if
+    if crypto == null then 
+        print(Util.size(80, Util.color(Util.colors.magenta, Util.italic("Crypto.so could not be loaded"))))
+        return null
+    end if
+    globals.crypto = crypto
+    return globals.crypto
+end function
+Util.apt_install = function(filename)
+    //attempt to install it with apt-get
+    aptclient = include_lib("/lib/aptclient.so")
+    if not aptclient then
+        aptclient = include_lib(program_path + "/aptclient.so")
+    end if
+    if aptclient != null then
+        aptclient.update
+        install_result = aptclient.install(filename)
+        if install_result == true then return true
+    end if
+    return false
+end function
