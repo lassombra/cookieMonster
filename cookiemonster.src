@@ -1,4 +1,4 @@
-version = "0.0.5"
+version = "0.0.6"
 if not globals.hasIndex("apps") then globals.apps = {}
 if not globals.hasIndex("buffer") then globals.buffer = []
 import_code("db/db.src")

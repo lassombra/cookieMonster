@@ -1,0 +1,111 @@
+if not globals.hasIndex("apps") then globals.apps = {}
+globals.apps.map = {}
+globals.apps.map.init = function()
+    map = {}
+    map.run = function(args)
+        argsValid = args.len <= 2
+        if args.len == 1 and not (is_valid_ip(args[0]) or args[0] == "-c") then argsValid = false
+        if args.len == 2 and (args[0] != "-c" or not is_valid_ip(args[1])) then argsValid = false
+        if not argsValid then
+            print(map.help)
+            return
+        end if
+        includeNoPortComputers = args.len > 0 and args[0] == "-c"
+        if not get_shell.host_computer.is_network_active then 
+            print(Util.size(80, Util.color(Util.Colors.Magenta,"No internet access.")))
+            return
+        end if
+        ipAddress = "127.0.0.1"
+        if args.len > 1 then 
+            ipAddress = args[1]
+        else if args.len > 0 and is_valid_ip(args[0]) then
+            ipAddress = args[0]
+        end if
+        if ipAddress == "127.0.0.1" then ipAddress = get_shell.host_computer.network_gateway
+        isLanIp = is_lan_ip( ipAddress )
+        router = get_router( ipAddress )
+
+        if router == null then 
+            print(Util.size(80, Util.color(Util.Colors.Magenta,"ip address not found")))
+            return
+        end if
+        whoisInfo = whois(router.public_ip)
+        for line in whoisInfo.split("\n")
+            print(Util.pos(10, Util.size(60, Util.color(Util.Colors.Grey, line))))
+        end for
+        mapped_devices = []
+        mapped_devices.push(router.local_ip)
+        self.map_router_or_switch(router, mapped_devices, includeNoPortComputers)
+    end function
+    map.map_router_or_switch = function(router, mapped_devices, includeNoPortComputers = false)
+        if router == null then return
+        switch = get_switch(router.local_ip)
+        if switch != null then 
+            print(Util.pos(10, Util.size(80, "[" + Util.color(Util.Colors.Yellow,"switch")+"] "+switch.local_ip)))
+        else
+            print(Util.pos(10, Util.size(80, "[" + Util.color(Util.Colors.Green, "router") + "] " + router.local_ip)))
+        end if
+        ports = router.used_ports
+        if (ports.len > 0) then
+            portInfo = Util.pos(20, Util.size(80, "port service version status ip"))
+            for port in router.used_ports
+                portInfo = portInfo + self.portInfo(port, router)
+            end for
+            print(format_columns(portInfo))
+        end if
+        lanIps = router.devices_lan_ip
+        devices = []
+        routers = []
+        for ip in lanIps
+            if mapped_devices.indexOf(ip) == null then
+                mapped_devices.push(ip)
+                subrouter = get_router(ip)
+                if subrouter != null then
+                    routers.push(subrouter)
+                else
+                    devices.push(ip)
+                end if
+            end if
+        end for
+        for ip in devices
+            self.mapDevice(ip, router, includeNoPortComputers)
+        end for
+        for subrouter in routers
+            self.map_router_or_switch(subrouter, mapped_devices, includeNoPortComputers)
+        end for
+    end function
+    map.mapDevice = function(lanIp, router, includeNoPortComputers)
+        ports = router.device_ports(lanIp)
+        if typeof(ports) == "string" then 
+            if includeNoPortComputers then print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
+            print(Util.pos(20, Util.size(80, Util.color(Util.Colors.Magenta, ports))))
+        else if ports.len > 0 then
+            print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
+            portInfo = Util.pos(20, Util.size(80, "port service version"))
+            for port in ports
+                portInfo = portInfo + self.portInfo(port, router, true)
+            end for
+            print(format_columns(portInfo))
+        else if includeNoPortComputers then
+            print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
+        end if
+    end function
+    map.portInfo = function(port, router, device = false)
+        info = router.port_info(port).split(" ")
+        status = Util.color(Util.Colors.Green,"open")
+        if port.is_closed then status = Util.color(Util.Colors.Magenta,"closed")
+        portInfo = port.port_number + " " + info[0] + " " + info[1]
+        if not device then portInfo = portInfo + " " + status + "  " + port.get_lan_ip
+        return char(10) + Util.pos(20, Util.size(80, portInfo))
+    end function
+    map.help = Util.pos(10, Util.size(80, "======================================================================"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, Util.bold(" -h | --help")+" print this help block"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, Util.bold(" -c <ip_address>")+" print whois and port information for all connected   "))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, "                 devices for ip_address                               "))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, Util.bold(" <ip_address>")+" print whois and port information for ip_address"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, "----------------------------------------------------------------------"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, "| ip_address is optional.  If not provided, will use the current     |"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, "| context to determine router to show                                |"))
+    map.help = map.help + char(10) + Util.pos(10, Util.size(80, "======================================================================"))
+    globals.apps.map = map
+end function
