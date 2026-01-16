@@ -100,7 +100,7 @@ globals.apps.wifi.connect = function(args)
         availableNetworks = []
         connectedNetwork = get_router.bssid_name
         for network in globals.db.retrieveAll(self.NETWORK_TABLE_NAME)
-            if aliasedBssids.indexOf(network.bssid) == null and netowrk.bssid != connectedNetwork then availableNetworks.push(network)
+            if aliasedBssids.indexOf(network.bssid) == null and network.bssid != connectedNetwork then availableNetworks.push(network)
         end for
         if availableNetworks.len == 0 then
             print(Util.size(80, Util.color(Util.Colors.Cyan, "All known networks are aliased networks or currently connected")))
