@@ -1,9 +1,11 @@
 version = "0.0.6"
+if not globals.hasIndex("tools") then globals.tools = {}
 if not globals.hasIndex("apps") then globals.apps = {}
 if not globals.hasIndex("buffer") then globals.buffer = []
 import_code("db/db.src")
 import_code("utils/libs.src")
 import_code("utils/util.src")
+import_code("tools/tools.src")
 import_code("apps/apps.src")
 import_code("splashScreen.src")
 buildPrompt = function
