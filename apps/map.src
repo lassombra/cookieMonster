@@ -56,36 +56,49 @@ globals.apps.map.init = function()
         lanIps = router.devices_lan_ip
         devices = []
         routers = []
+        is_external = router.public_ip != get_shell.host_computer.public_ip
         for ip in lanIps
             if mapped_devices.indexOf(ip) == null then
                 mapped_devices.push(ip)
-                subrouter = get_router(ip)
-                if subrouter != null then
-                    routers.push(subrouter)
+                if not is_external then
+                    subrouter = get_router(ip)
+                    if subrouter != null then
+                        routers.push(subrouter)
+                    else
+                        devices.push(ip)
+                    end if
                 else
                     devices.push(ip)
                 end if
             end if
         end for
         for ip in devices
-            self.mapDevice(ip, router, includeNoPortComputers)
+            self.mapDevice(ip, router, includeNoPortComputers, is_external)
         end for
         for subrouter in routers
             self.map_router_or_switch(subrouter, mapped_devices, includeNoPortComputers)
         end for
     end function
-    map.mapDevice = function(lanIp, router, includeNoPortComputers)
+    map.mapDevice = function(lanIp, router, includeNoPortComputers, is_external = false)
         ports = router.device_ports(lanIp)
         if typeof(ports) == "string" then 
             if includeNoPortComputers then print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
             print(Util.pos(20, Util.size(80, Util.color(Util.Colors.Magenta, ports))))
-        else if ports.len > 0 then
+        else if ports.len > 0 and not is_external then
             print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
             portInfo = Util.pos(20, Util.size(80, "port service version"))
             for port in ports
                 portInfo = portInfo + self.portInfo(port, router, true)
             end for
             print(format_columns(portInfo))
+        else if ports.len > 0 and is_external then
+            has_8080 = false
+            for port in ports
+                if port.port_number == 8080 then has_8080 = true
+            end for
+            if not has_8080 then
+                print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
+            end if
         else if includeNoPortComputers then
             print(Util.pos(10, Util.size(80, "["+Util.color(Util.Colors.Cyan,"device")+"] " + lanIp)))
         end if

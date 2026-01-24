@@ -18,7 +18,7 @@ globals.tools.metax.scan = function(metalib)
     addresses = metax.scan(metalib)
     areas = {}
     for address in addresses
-        areas[address] = metax.scan_address(address)
+        areas[address] = metax.scan_address(metalib, address)
     end for
-    return {"addresses": addresses, "scanResults": areas}
+    return {"addresses": addresses, "scanResults":areas}
 end function
