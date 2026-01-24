@@ -1,0 +1,14 @@
+if not globals.hasIndex("tools") then globals.tools = {}
+globals.tools.metax = {}
+globals.tools.metax.load_net = function(metax, args)
+    port = 0
+    if args.len > 1 and args[1].to_int then
+        port = args[1].to_int
+    end if
+    session = metax.net_use(args[0], port)
+    if session == null then return null
+    return session.dump_lib
+end function
+globals.tools.metax.load_lib = function(metax, libPath)
+    return metax.load(libPath)
+end function
