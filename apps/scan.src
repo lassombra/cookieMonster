@@ -1,0 +1,111 @@
+if not globals.hasIndex("apps") then globals.apps = {}
+globals.apps.scan = {}
+globals.apps.scan.TABLE_NAME = "libraries"
+globals.apps.scan.run = function(args)
+    argsValid = true
+    if args.len < 1 or (not is_valid_ip(args[0]) and args[0] != "-l") then argsValid = false
+    if args.len == 1 and not is_valid_ip(args[0]) then argsValid = false
+    if args.len == 2 and args[0] != "-l" and args[0] != "-f" and not is_valid_ip(args[0]) then argsValid = false
+    if args.len > 3 then argsValid = false
+    if not argsValid then
+        print(self.help)
+        return
+    end if
+    metax = Util.load_metax
+    if not metax then return
+    lib = null
+    if is_valid_ip(args[0]) then lib = globals.tools.metax.load_net(metax, args)
+    if args.indexOf("-l") != null then lib = globals.tools.metax.load_lib(metax, args[-1])
+    if lib == null then
+        print(Util.pos(10, Util.size(80, Util.color(Util.Colors.Magenta, "Could not load target library"))))
+        return
+    end if
+    print(Util.pos(10, Util.size(80, Util.color(Util.Colors.Grey, "Scanning " + lib.lib_name + " v" + Util.italic(lib.version)))))
+    force = args.indexOf("-f") != null
+    exploits = self.process(lib, force)
+    // bold and color tags here, with no content in order to match the tags used for the rows - this avoids weird alignment issues with format_columns
+    table = Util.pos(10, Util.size(80, "address unsafe_value " + 
+    Util.bold(Util.color(Util.Colors.Green,""))+"accessType " +
+    Util.bold(Util.color(Util.Colors.Green,""))+"accessLevel root_active users_active guest_active connections forwards registered_users paths libs"))
+    for address in exploits.indexes
+        for exploit in exploits[address]
+            table = table + char(10) + Util.pos(10, Util.size(80, address + " " + exploit.corruptKey + " " +
+                Util.format_access_type(exploit.results.type) + " " + Util.format_access_level(exploit.results.level) + " " +
+                Util.format_bool(exploit.requirements.rootActive) + " " + exploit.requirements.userActive + " " + Util.format_bool(exploit.requirements.guestActive) + " " + 
+                exploit.requirements.connections + " " + exploit.requirements.forwards + " " + exploit.requirements.registeredUsers + " " +
+                exploit.requirements.paths.join(",") + " " + self.format_libs(exploit.requirements.libs)))
+        end for
+    end for
+    print(format_columns(table))
+end function
+globals.apps.scan.process = function(metalib, force = false)
+    dbKey = metalib.lib_name + "_v" + metalib.version
+    dbEntry = globals.db.retrieve(self.TABLE_NAME, dbKey)
+    if dbEntry != null and force == false then return dbEntry
+    primaryScanResults = globals.tools.metax.scan(metalib)
+    i = 0
+    exploits = {}
+    for address in primaryScanResults.addresses
+        exploit = []
+        exploits[address] = exploit
+        results = primaryScanResults.scanResults[address].split("Unsafe check")[1:]
+        for entry in results
+            corruptKey = entry.split("b>")[1].split("</")[0]
+            requirements = self.parse_requirements(entry.split("\*")[1:])
+            exploit.push({"corruptKey": corruptKey, "requirements": requirements, "results": {"type": "U", "level": "U"}})
+        end for
+    end for
+    globals.db.set(self.TABLE_NAME, dbKey, exploits)
+    return exploits
+end function
+globals.apps.scan.format_libs = function(libsArray)
+    strings = []
+    for library in libsArray
+        strings.push(library.lib + Util.size(60,Util.italic(library.version)))
+    end for
+    return strings.join(",")
+end function
+globals.apps.scan.parse_requirements = function(requirementList)
+    requirements = {"rootActive": false, "userActive": 0, "guestActive": false, "connections": 0, "forwards": 0, "registeredUsers": 0, "paths": [], "libs": []}
+    for requirement in requirementList
+        if requirement.indexOf("exists in the file system") != null then
+            path = requirement.split("path ")[1].split("exists")[0].trim
+            requirements.paths.push(path)
+        else if requirement.indexOf("root") != null then
+            requirements.rootActive = true
+        else if requirement.indexOf("guest active") != null then
+            requirements.guestActive = true
+        else if requirement.indexOf("an active") != null then
+            requirements.userActive = 1
+        else if requirement.indexOf("registered user") != null then
+            requirements.registeredUsers = requirement.split("equal to")[1].trim[:-1].to_int
+        else if requirement.indexOf("port forwarding configured") != null then
+            requirements.forwards = requirement.split(" ")[0].to_int
+        else if requirement.indexOf("namespace") != null then
+            lib = requirement.split("<b>")[1].split("</b>")[0]
+            ver = requirement.split(">= ")[1].trim
+            requirements.libs.push({"lib": lib, "version": ver})
+        else
+            print(Util.pos(10, Util.size(80, Util.color(Util.Colors.Magenta, Util.italic("Unrecognized requirement string: " + requirement)))))
+        end if
+    end for
+    return requirements
+end function
+globals.apps.scan.init = function()
+    globals.db.addTable(self.TABLE_NAME)
+end function
+globals.apps.scan.help = Util.pos(10, Util.size(80,"======================================================================"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, Util.bold(" -l library")+" - Scan a local library"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, Util.bold(" -f")+" - Force a rescan instead of using database info"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, Util.bold(" ip [port]")+" - scan an IP and port (0 assumed if no port provided)"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "----------------------------------------------------------------------"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "| -f can be combined with either other option to force a fresh scan  |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "|    This can be particularly helpful when new requirements parsing  |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "|    introduced.                                                     |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "| -l is used to scan a local library                                 |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "| ip and optional port will scan a reachable ip and port from this   |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "|    computer's perspective                                          |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "| Output is saved to database and shown in a table indicating what   |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "|    exploits are available, and what their known requirements and   |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "|    results are.                                                    |"))
+globals.apps.scan.help = globals.apps.scan.help + Util.pos(10, Util.size(80, "======================================================================"))

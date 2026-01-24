@@ -8,11 +8,26 @@ Util.load_crypto = function()
         if installed then crypto = include_lib("/lib/crypto.so")
     end if
     if crypto == null then 
-        print(Util.size(80, Util.color(Util.colors.magenta, Util.italic("Crypto.so could not be loaded"))))
+        print(Util.size(80, Util.color(Util.Colors.Magenta, Util.italic("crypto.so could not be loaded"))))
         return null
     end if
     globals.crypto = crypto
     return globals.crypto
+end function
+Util.load_metax = function()
+    if globals.hasIndex("metax") then return globals.metax
+    metax = include_lib("/lib/metaxploit.so")
+    if metax == null then metax = include_lib(program_path + "/metaxploit.so")
+    if metax == null then
+        installed = self.apt_install("metaxploit.so")
+        if installed then metax = include_lib("/lib/metaxploit.so")
+    end if
+    if metax == null then 
+        print(Util.size(80, Util.color(Util.Colors.Magenta, Util.italic("metaxploit.so could not be loaded"))))
+        return null
+    end if
+    globals.metax = metax
+    return globals.metax
 end function
 Util.apt_install = function(filename)
     //attempt to install it with apt-get

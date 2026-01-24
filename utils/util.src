@@ -86,6 +86,22 @@ Util.get_path = function(result, path)
 	end if
 	return file
 end function
+Util.format_access_type = function(accessType)
+    if accessType == "F" then return Util.italic(Util.color(Util.Colors.Magenta, "File"))
+    if accessType == "C" then return Util.bold("") + Util.color(Util.Colors.Yellow, "Computer")
+    if accessType == "S" then return Util.bold(Util.color(Util.Colors.Green, "Shell"))
+    return Util.italic(Util.color(Util.Colors.Cyan,"unknown"))
+end function
+Util.format_access_level = function(accessLevel)
+    if accessLevel == "G" then return Util.italic(Util.color(Util.Colors.Magenta, "Guest"))
+    if accessLevel == "B" then return Util.bold("") + Util.color(Util.Colors.Yellow, "User")
+    if accessLevel == "R" then return Util.bold(Util.color(Util.Colors.Green, "Root"))
+    return Util.italic(Util.color(Util.Colors.Cyan,"unknown"))
+end function
+Util.format_bool = function(booleanValue)
+	if booleanValue == true then return "true"
+	return "false"
+end function
 Util.Colors = {"Cyan": "#00FFFF",
 "Blue": "#0000FF",
 "Yellow": "#FFFF00",

@@ -78,7 +78,7 @@ DB.save = function()
         tableFile = char(10) + "table={}"
         for id in tableData.indexes
             row = tableData[id]
-            tableFile = tableFile + char(10) + "table[""" + id + """] = " + @row
+            tableFile = tableFile + char(10) + "table[""" + id + """] = " + self._serialize(row)
         end for
         tableFile = tableFile + char(10) + "get_custom_object[""" + self.name + """][""" + key + """] = table"
         srcPath = folder.path + "/" + self.tableFiles[key] + ".src"
@@ -91,7 +91,10 @@ DB.save = function()
         srcFile.set_content(fileSecurityTop + tableFile + fileSecurityEnd)
         buildResult = get_shell.build(srcPath, folder.path, false)
         srcFile.delete
-        if buildResult != "" then return buildResult        
+        if buildResult != "" then 
+            // print tableFile
+            return buildResult        
+        end if
     end for
     tableList = self.tableFiles.indexes
     tablePaths = self.tableFiles
@@ -108,7 +111,10 @@ DB.save = function()
     srcFile.set_content(fileSecurityTop + metaFile + fileSecurityEnd)
     buildResult = get_shell.build(srcPath, folder.path, false)
     srcFile.delete
-    if buildResult != "" then return buildResult
+    if buildResult != "" then 
+        // print(metaFile)
+        return buildResult
+    end if
     return ""
 end function
 
@@ -134,4 +140,24 @@ DB.load = function ()
     end for
     get_custom_object.remove(self.name)
     return ""
+end function
+// Convert a value (including maps) to a parsable string
+DB._serialize = function(val)
+	if typeof(val) == "map" then
+		kvpairs = []
+		for k in val.indexes
+			kvpairs.push(self._serialize(k)+":"+self._serialize(val[k]))
+		end for
+		return "{" + kvpairs.join(",") + "}"
+	else if typeof(val) == "list" then
+        items = []
+		for item in val
+			items.push(self._serialize(item))
+		end for
+        return "["+items.join(",")+"]"
+	else if typeof(val) == "string" then
+		return """" + val.replace("""", """""") + """"
+	else
+		return val
+	end if
 end function

@@ -130,7 +130,7 @@ globals.apps.wifi.crack = function(networkCount, interface = "wlan0")
     for i in range(1,count)
         randomIndex = floor(rnd * networks.len)
         network = networks[randomIndex]
-        required_acks = ceil(300000 / network.pwr)
+        required_acks = ceil(300000 / network.pwr + 15) + 1
         crypto.aireplay(network.bssid, network.essid, required_acks)
         key = crypto.aircrack(current_path + "/file.cap")
         if key then

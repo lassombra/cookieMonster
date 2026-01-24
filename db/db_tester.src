@@ -5,7 +5,12 @@ _db = new DB
 _db.init("Database", "pass", "/home/guest/DB")
 _db.load()
 _db.addTable("basic")
-// _db.set("basic", "127.0.0.1", {"pass": "root", "libraries": {"lib_http.so":"1.0.3", "kernel_router.so":"1.3.7"}})
+_db.addTable("libraries")
+_db.set("libraries", "libhttp.sov1.0.0", {"0x5FFE9226": [{"corruptKey": "swindentpositio", "requirements": {
+    "rootActive": false, "userActive": 0, "guestActive": false, "connections": 0, "forwards": 0, "registeredUsers": 0, "paths": ["/Public", "/lib/libhttp.so"], "libs": [
+        {"lib": "init.so", "version": "1.0.0"}
+    ]}, "results":{"type":"U", "level":"U"}}]})
+_db.set("basic", "127.0.0.1", {"pass": "root", "libraries": {"lib_http.so":"1.0.3", "kernel_router.so":"1.3.7"}})
 print(_db.retrieve("basic", "127.0.0.1"))
 print(_db.save())
 
@@ -13,4 +18,6 @@ _db2 = new DB
 _db2.init("Database", "pass", "/home/guest/DB")
 print(_db2.load())
 row = _db2.retrieve("basic", "127.0.0.1")
+print(row)
+row = _db2.retrieve("libraries", "libhttp.sov1.0.0")
 print(row)

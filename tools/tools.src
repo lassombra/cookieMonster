@@ -1,0 +1,2 @@
+if not globals.hasIndex("tools") then globals.tools = {}
+import_code("metax.src")
